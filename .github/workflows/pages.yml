@@ -28,7 +28,7 @@ jobs:
       - name: Package the site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: .
       - name: Publish
         id: deployment
         uses: actions/deploy-pages@v4
