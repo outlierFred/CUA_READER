@@ -85,7 +85,22 @@
 
     .input-panel { padding: clamp(20px, 4vw, 34px); }
 
-    .field-heading { margin-bottom: 10px; }
+    .field-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 10px;
+    }
+
+    .validity {
+      min-height: 1.75rem;
+      color: var(--success);
+      font-size: 1.3rem;
+      font-weight: 800;
+      line-height: 1.2;
+      text-align: right;
+    }
 
     label, h2 {
       margin: 0;
@@ -273,6 +288,7 @@
       .shell { width: min(100% - 20px, 980px); padding: 22px 0 38px; }
       header { align-items: flex-start; margin-left: 4px; }
       .workspace { border-radius: 17px; }
+      .validity { font-size: 1.1rem; }
       textarea { min-height: 230px; }
       .actions { align-items: stretch; flex-direction: column; }
       .action-group { display: grid; grid-template-columns: 1fr auto auto; }
@@ -303,6 +319,7 @@
       <div class="input-panel">
         <div class="field-heading">
           <label id="paste-label" for="source">Paste JSON response</label>
+          <div class="validity" id="validity" role="status" aria-live="polite"></div>
         </div>
         <textarea id="source" spellcheck="false" autocomplete="off" placeholder="Paste the full JSON response here…" aria-describedby="validation message"></textarea>
         <div class="validation" id="validation" role="status" aria-live="polite"></div>
@@ -333,6 +350,7 @@
       const findButton = document.querySelector('#find');
       const formatButton = document.querySelector('#format');
       const clearButton = document.querySelector('#clear');
+      const validity = document.querySelector('#validity');
       const validation = document.querySelector('#validation');
       const message = document.querySelector('#message');
       const results = document.querySelector('#results');
@@ -382,6 +400,7 @@
         source.removeAttribute('aria-invalid');
 
         if (!text.trim()) {
+          validity.textContent = '';
           validation.textContent = '';
           validation.className = 'validation';
           formatButton.disabled = true;
@@ -390,6 +409,7 @@
 
         try {
           const data = JSON.parse(text);
+          validity.textContent = 'Valid JSON';
           validation.textContent = '';
           validation.className = 'validation';
           source.classList.add('is-valid');
@@ -397,6 +417,7 @@
           formatButton.disabled = false;
           return { valid: true, empty: false, data };
         } catch (error) {
+          validity.textContent = '';
           validation.textContent = describeJsonError(error, text);
           validation.className = 'validation invalid';
           source.classList.add('is-invalid');
