@@ -75,12 +75,6 @@
       letter-spacing: -.035em;
     }
 
-    header p {
-      margin: 7px 0 0;
-      color: var(--muted);
-      font-size: .95rem;
-    }
-
     .workspace {
       overflow: hidden;
       border: 1px solid var(--line);
@@ -91,25 +85,13 @@
 
     .input-panel { padding: clamp(20px, 4vw, 34px); }
 
-    .field-heading {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 10px;
-    }
+    .field-heading { margin-bottom: 10px; }
 
     label, h2 {
       margin: 0;
       font-size: 1rem;
       font-weight: 760;
       letter-spacing: -.01em;
-    }
-
-    .privacy-note {
-      color: var(--muted);
-      font-size: .82rem;
-      white-space: nowrap;
     }
 
     textarea {
@@ -151,7 +133,7 @@
     textarea.is-invalid:focus { box-shadow: 0 0 0 4px rgba(158, 61, 52, .10); }
 
     .validation {
-      display: flex;
+      display: none;
       align-items: flex-start;
       gap: 8px;
       min-height: 22px;
@@ -171,15 +153,12 @@
       background: #a6b2ae;
     }
 
-    .validation.valid { color: var(--success); }
-    .validation.valid::before { background: var(--success); }
-    .validation.invalid { color: var(--danger); }
+    .validation.invalid { display: flex; color: var(--danger); }
     .validation.invalid::before { background: var(--danger); }
 
     .actions {
       display: flex;
       align-items: center;
-      justify-content: space-between;
       gap: 16px;
       margin-top: 16px;
     }
@@ -211,13 +190,6 @@
 
     .quiet { background: var(--soft); color: var(--ink); }
     .quiet:hover { background: #e3ebe7; }
-
-    .helper {
-      margin: 0;
-      color: var(--muted);
-      font-size: .86rem;
-      text-align: right;
-    }
 
     .message {
       display: none;
@@ -297,24 +269,13 @@
 
     .invalid-link .file-name { text-decoration: none; }
 
-    footer {
-      margin-top: 18px;
-      color: var(--muted);
-      font-size: .82rem;
-      text-align: center;
-    }
-
     @media (max-width: 640px) {
       .shell { width: min(100% - 20px, 980px); padding: 22px 0 38px; }
       header { align-items: flex-start; margin-left: 4px; }
-      header p { line-height: 1.4; }
       .workspace { border-radius: 17px; }
-      .field-heading { align-items: flex-start; flex-direction: column; gap: 2px; }
-      .privacy-note { white-space: normal; }
       textarea { min-height: 230px; }
       .actions { align-items: stretch; flex-direction: column; }
       .action-group { display: grid; grid-template-columns: 1fr auto auto; }
-      .helper { text-align: left; }
       .link-card { padding: 14px; }
     }
 
@@ -335,7 +296,6 @@
       </div>
       <div>
         <h1>CUA Reader</h1>
-        <p>Turn a full response into a tidy list of input files.</p>
       </div>
     </header>
 
@@ -343,17 +303,15 @@
       <div class="input-panel">
         <div class="field-heading">
           <label id="paste-label" for="source">Paste JSON response</label>
-          <span class="privacy-note">Your content stays in this browser</span>
         </div>
-        <textarea id="source" spellcheck="false" autocomplete="off" placeholder="Paste the full JSON response here…" aria-describedby="validation paste-help message"></textarea>
-        <div class="validation" id="validation" role="status" aria-live="polite">Waiting for JSON.</div>
+        <textarea id="source" spellcheck="false" autocomplete="off" placeholder="Paste the full JSON response here…" aria-describedby="validation message"></textarea>
+        <div class="validation" id="validation" role="status" aria-live="polite"></div>
         <div class="actions">
           <div class="action-group">
             <button class="primary" id="find" type="button">Find asset uploads</button>
             <button class="quiet" id="format" type="button" disabled>Format JSON</button>
             <button class="quiet" id="clear" type="button">Clear</button>
           </div>
-          <p class="helper" id="paste-help">Large responses are welcome.</p>
         </div>
         <div class="message" id="message" role="status" aria-live="polite"></div>
       </div>
@@ -367,7 +325,6 @@
       </section>
     </section>
 
-    <footer>Open a filename to visit its link.</footer>
   </main>
 
   <script>
@@ -419,23 +376,13 @@
         return `Invalid JSON${location}: ${detail}`;
       }
 
-      function valueSummary(data) {
-        if (Array.isArray(data)) return `array with ${data.length} ${data.length === 1 ? 'item' : 'items'}`;
-        if (data === null) return 'null value';
-        if (typeof data === 'object') {
-          const size = Object.keys(data).length;
-          return `object with ${size} top-level ${size === 1 ? 'property' : 'properties'}`;
-        }
-        return `${typeof data} value`;
-      }
-
       function validateJson({ focusError = false } = {}) {
         const text = source.value.replace(/^\uFEFF/, '');
         source.classList.remove('is-valid', 'is-invalid');
         source.removeAttribute('aria-invalid');
 
         if (!text.trim()) {
-          validation.textContent = 'Waiting for JSON.';
+          validation.textContent = '';
           validation.className = 'validation';
           formatButton.disabled = true;
           return { valid: false, empty: true, data: null };
@@ -443,8 +390,8 @@
 
         try {
           const data = JSON.parse(text);
-          validation.textContent = `Valid JSON — ${valueSummary(data)}.`;
-          validation.className = 'validation valid';
+          validation.textContent = '';
+          validation.className = 'validation';
           source.classList.add('is-valid');
           source.setAttribute('aria-invalid', 'false');
           formatButton.disabled = false;
@@ -470,7 +417,7 @@
       }
 
       function getInputFiles(data) {
-        const uploads = data?.task?.respose?.before?.['step-TextCollection-76e7ad3fc87b']?.output?.asset_upload;
+        const uploads = data?.task?.response?.before?.['step-TextCollection-76e7ad3fc87b']?.output?.asset_upload;
         if (!Array.isArray(uploads)) return [];
 
         const found = uploads
