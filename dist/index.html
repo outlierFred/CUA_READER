@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Turn a pasted response into a clean list of input-file links.">
   <meta name="theme-color" content="#12352f">
-  <title>Link Lens</title>
+  <title>CUA Reader</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2312352f'/%3E%3Cpath d='M12.2 19.8l-1.4 1.4a4.2 4.2 0 01-6-6l4-4a4.2 4.2 0 016 0' fill='none' stroke='%23f6c453' stroke-width='2.7' stroke-linecap='round'/%3E%3Cpath d='M19.8 12.2l1.4-1.4a4.2 4.2 0 016 6l-4 4a4.2 4.2 0 01-6 0' fill='none' stroke='%23fff' stroke-width='2.7' stroke-linecap='round'/%3E%3Cpath d='M11.5 20.5l9-9' stroke='%23fff' stroke-width='2.7' stroke-linecap='round'/%3E%3C/svg%3E">
   <style>
     :root {
@@ -21,6 +21,7 @@
       --soft: #edf2ef;
       --danger: #9e3d34;
       --danger-soft: #fff1ef;
+      --success: #176b52;
       --shadow: 0 18px 55px rgba(18, 53, 47, .10);
     }
 
@@ -136,6 +137,45 @@
       box-shadow: 0 0 0 4px rgba(18, 53, 47, .10);
     }
 
+    textarea.is-valid {
+      border-color: var(--success);
+      background: #fbfffd;
+    }
+
+    textarea.is-invalid {
+      border-color: var(--danger);
+      background: #fffdfc;
+    }
+
+    textarea.is-valid:focus { box-shadow: 0 0 0 4px rgba(23, 107, 82, .11); }
+    textarea.is-invalid:focus { box-shadow: 0 0 0 4px rgba(158, 61, 52, .10); }
+
+    .validation {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      min-height: 22px;
+      margin: 9px 2px -4px;
+      color: var(--muted);
+      font-size: .84rem;
+      line-height: 1.45;
+    }
+
+    .validation::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      flex: 0 0 auto;
+      margin-top: .37rem;
+      border-radius: 50%;
+      background: #a6b2ae;
+    }
+
+    .validation.valid { color: var(--success); }
+    .validation.valid::before { background: var(--success); }
+    .validation.invalid { color: var(--danger); }
+    .validation.invalid::before { background: var(--danger); }
+
     .actions {
       display: flex;
       align-items: center;
@@ -159,6 +199,7 @@
     button:hover { transform: translateY(-1px); }
     button:active { transform: translateY(0); }
     button:focus-visible { outline: 3px solid rgba(246, 196, 83, .8); outline-offset: 2px; }
+    button:disabled { cursor: not-allowed; opacity: .5; transform: none; }
 
     .primary {
       background: var(--forest);
@@ -221,10 +262,6 @@
     .link-list { display: grid; gap: 10px; }
 
     .link-card {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: center;
-      gap: 20px;
       padding: 15px 16px;
       border: 1px solid var(--line);
       border-radius: 12px;
@@ -248,26 +285,17 @@
       outline-offset: 3px;
     }
 
-    .domain {
+    .file-url {
       display: block;
-      overflow: hidden;
-      margin-top: 3px;
+      margin-top: 5px;
       color: var(--muted);
       font-size: .8rem;
       font-weight: 500;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .open-label {
-      color: var(--forest);
-      font-size: .84rem;
-      font-weight: 750;
-      white-space: nowrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     .invalid-link .file-name { text-decoration: none; }
-    .invalid-link .open-label { color: var(--muted); }
 
     footer {
       margin-top: 18px;
@@ -285,11 +313,9 @@
       .privacy-note { white-space: normal; }
       textarea { min-height: 230px; }
       .actions { align-items: stretch; flex-direction: column; }
-      .action-group { display: grid; grid-template-columns: 1fr auto; }
+      .action-group { display: grid; grid-template-columns: 1fr auto auto; }
       .helper { text-align: left; }
-      .link-card { gap: 10px; padding: 14px; }
-      .open-label { font-size: 0; }
-      .open-label::after { content: "↗"; font-size: 1.1rem; }
+      .link-card { padding: 14px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -308,7 +334,7 @@
         </svg>
       </div>
       <div>
-        <h1>Link Lens</h1>
+        <h1>CUA Reader</h1>
         <p>Turn a full response into a tidy list of input files.</p>
       </div>
     </header>
@@ -316,13 +342,15 @@
     <section class="workspace" aria-labelledby="paste-label">
       <div class="input-panel">
         <div class="field-heading">
-          <label id="paste-label" for="source">Paste your response</label>
+          <label id="paste-label" for="source">Paste JSON response</label>
           <span class="privacy-note">Your content stays in this browser</span>
         </div>
-        <textarea id="source" spellcheck="false" autocomplete="off" placeholder="Paste the full response here…" aria-describedby="paste-help message"></textarea>
+        <textarea id="source" spellcheck="false" autocomplete="off" placeholder="Paste the full JSON response here…" aria-describedby="validation paste-help message"></textarea>
+        <div class="validation" id="validation" role="status" aria-live="polite">Waiting for JSON.</div>
         <div class="actions">
           <div class="action-group">
             <button class="primary" id="find" type="button">Find input links</button>
+            <button class="quiet" id="format" type="button" disabled>Format JSON</button>
             <button class="quiet" id="clear" type="button">Clear</button>
           </div>
           <p class="helper" id="paste-help">Large responses are welcome.</p>
@@ -332,7 +360,7 @@
 
       <section class="results" id="results" aria-labelledby="results-title">
         <div class="results-heading">
-          <h2 id="results-title">Input links</h2>
+          <h2 id="results-title">Asset upload</h2>
           <span class="count" id="count" aria-label="0 links found">0</span>
         </div>
         <div class="link-list" id="link-list"></div>
@@ -346,7 +374,9 @@
     (() => {
       const source = document.querySelector('#source');
       const findButton = document.querySelector('#find');
+      const formatButton = document.querySelector('#format');
       const clearButton = document.querySelector('#clear');
+      const validation = document.querySelector('#validation');
       const message = document.querySelector('#message');
       const results = document.querySelector('#results');
       const count = document.querySelector('#count');
@@ -362,6 +392,74 @@
         message.className = 'message';
       }
 
+      function locationFromPosition(text, position) {
+        const before = text.slice(0, Math.max(0, position));
+        const lines = before.split(/\r\n|\r|\n/);
+        return { line: lines.length, column: lines[lines.length - 1].length + 1 };
+      }
+
+      function describeJsonError(error, text) {
+        const raw = error instanceof Error ? error.message : String(error);
+        const positionMatch = raw.match(/(?:at position|position)\s+(\d+)/i);
+        const lineColumnMatch = raw.match(/line\s+(\d+)\s+column\s+(\d+)/i);
+        let location = '';
+
+        if (positionMatch) {
+          const { line, column } = locationFromPosition(text, Number(positionMatch[1]));
+          location = ` at line ${line}, column ${column}`;
+        } else if (lineColumnMatch) {
+          location = ` at line ${lineColumnMatch[1]}, column ${lineColumnMatch[2]}`;
+        }
+
+        const detail = raw
+          .replace(/^JSON\.parse:\s*/i, '')
+          .replace(/\s+at position\s+\d+.*$/i, '')
+          .replace(/\s+at line\s+\d+\s+column\s+\d+.*$/i, '')
+          .replace(/^Unexpected token '?(.+?)'?[,]? /i, 'Unexpected token $1: ');
+        return `Invalid JSON${location}: ${detail}`;
+      }
+
+      function valueSummary(data) {
+        if (Array.isArray(data)) return `array with ${data.length} ${data.length === 1 ? 'item' : 'items'}`;
+        if (data === null) return 'null value';
+        if (typeof data === 'object') {
+          const size = Object.keys(data).length;
+          return `object with ${size} top-level ${size === 1 ? 'property' : 'properties'}`;
+        }
+        return `${typeof data} value`;
+      }
+
+      function validateJson({ focusError = false } = {}) {
+        const text = source.value.replace(/^\uFEFF/, '');
+        source.classList.remove('is-valid', 'is-invalid');
+        source.removeAttribute('aria-invalid');
+
+        if (!text.trim()) {
+          validation.textContent = 'Waiting for JSON.';
+          validation.className = 'validation';
+          formatButton.disabled = true;
+          return { valid: false, empty: true, data: null };
+        }
+
+        try {
+          const data = JSON.parse(text);
+          validation.textContent = `Valid JSON — ${valueSummary(data)}.`;
+          validation.className = 'validation valid';
+          source.classList.add('is-valid');
+          source.setAttribute('aria-invalid', 'false');
+          formatButton.disabled = false;
+          return { valid: true, empty: false, data };
+        } catch (error) {
+          validation.textContent = describeJsonError(error, text);
+          validation.className = 'validation invalid';
+          source.classList.add('is-invalid');
+          source.setAttribute('aria-invalid', 'true');
+          formatButton.disabled = true;
+          if (focusError) source.focus();
+          return { valid: false, empty: false, data: null };
+        }
+      }
+
       function asSafeWebLink(value) {
         try {
           const parsed = new URL(String(value));
@@ -372,37 +470,19 @@
       }
 
       function getInputFiles(data) {
-        const found = [];
-        const seenObjects = new WeakSet();
+        const uploads = data?.task?.respose?.before?.['step-TextCollection-76e7ad3fc87b']?.output?.asset_upload;
+        if (!Array.isArray(uploads)) return [];
 
-        function addFiles(value) {
-          if (!Array.isArray(value)) return;
-          value.forEach((item) => {
-            if (!item || typeof item !== 'object') return;
-            if (typeof item.name !== 'string' || typeof item.url !== 'string') return;
-            found.push({ name: item.name.trim() || 'Unnamed file', url: item.url.trim() });
-          });
-        }
-
-        const before = data?.response?.before;
-        if (before && typeof before === 'object') {
-          Object.values(before).forEach((step) => addFiles(step?.output?.init_file_upload));
-        }
-
-        function visit(value) {
-          if (!value || typeof value !== 'object' || seenObjects.has(value)) return;
-          seenObjects.add(value);
-          if (Object.prototype.hasOwnProperty.call(value, 'init_file_upload')) {
-            addFiles(value.init_file_upload);
-          }
-          if (Array.isArray(value)) value.forEach(visit);
-          else Object.values(value).forEach(visit);
-        }
-
-        if (!found.length) visit(data);
+        const found = uploads
+          .filter((item) => item && typeof item === 'object')
+          .filter((item) => typeof item.name === 'string' && typeof item.s3Url === 'string')
+          .map((item) => ({
+            name: item.name.trim() || 'Unnamed file',
+            s3Url: item.s3Url.trim()
+          }));
 
         const unique = new Map();
-        found.forEach((file) => unique.set(`${file.name}\u0000${file.url}`, file));
+        found.forEach((file) => unique.set(`${file.name}\u0000${file.s3Url}`, file));
         return [...unique.values()];
       }
 
@@ -411,7 +491,7 @@
         const fragment = document.createDocumentFragment();
 
         files.forEach((file) => {
-          const safeUrl = asSafeWebLink(file.url);
+          const safeUrl = asSafeWebLink(file.s3Url);
           const card = document.createElement('article');
           card.className = safeUrl ? 'link-card' : 'link-card invalid-link';
 
@@ -426,17 +506,12 @@
             name.rel = 'noopener noreferrer';
           }
 
-          const domain = document.createElement('span');
-          domain.className = 'domain';
-          domain.textContent = safeUrl ? new URL(safeUrl).hostname : 'Link unavailable';
-          details.append(name, domain);
+          const fullUrl = document.createElement('span');
+          fullUrl.className = 'file-url';
+          fullUrl.textContent = file.s3Url || 'Link unavailable';
+          details.append(name, fullUrl);
 
-          const action = document.createElement('span');
-          action.className = 'open-label';
-          action.setAttribute('aria-hidden', 'true');
-          action.textContent = safeUrl ? 'Open link ↗' : 'Unavailable';
-
-          card.append(details, action);
+          card.append(details);
           fragment.append(card);
         });
 
@@ -450,24 +525,20 @@
         hideMessage();
         results.classList.remove('show');
 
-        const text = source.value.trim();
-        if (!text) {
+        const check = validateJson({ focusError: true });
+        if (check.empty) {
           showMessage('Paste a response first, then try again.');
           source.focus();
           return [];
         }
-
-        let data;
-        try {
-          data = JSON.parse(text.replace(/^\uFEFF/, ''));
-        } catch {
-          showMessage('That response could not be read. Check that you copied all of it and try again.');
+        if (!check.valid) {
+          showMessage('Fix the JSON error shown above, then try again.');
           return [];
         }
 
-        const files = getInputFiles(data);
+        const files = getInputFiles(check.data);
         if (!files.length) {
-          showMessage('No input links were found in this response.', 'info');
+          showMessage('No asset uploads were found in this response.', 'info');
           return [];
         }
 
@@ -482,16 +553,33 @@
         list.replaceChildren();
         results.classList.remove('show');
         count.textContent = '0';
+        validateJson();
         source.focus();
       }
 
+      function formatJson() {
+        const check = validateJson({ focusError: true });
+        if (!check.valid) return;
+        source.value = JSON.stringify(check.data, null, 2);
+        validateJson();
+        source.focus();
+      }
+
+      let validationTimer;
+      function queueValidation() {
+        clearTimeout(validationTimer);
+        validationTimer = setTimeout(validateJson, 180);
+      }
+
       findButton.addEventListener('click', findLinks);
+      formatButton.addEventListener('click', formatJson);
       clearButton.addEventListener('click', clearAll);
+      source.addEventListener('input', queueValidation);
       source.addEventListener('keydown', (event) => {
         if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') findLinks();
       });
 
-      window.linkLens = { findLinks, clearAll };
+      window.cuaReader = { findLinks, clearAll };
 
       const context = document.modelContext;
       if (context?.registerTool) {
@@ -499,7 +587,7 @@
           void Promise.resolve(context.registerTool({
             name: 'show_input_links',
             title: 'Show input links',
-            description: 'Paste a full response into Link Lens and show the filenames and web links found in its input-file list.',
+            description: 'Paste a full response into CUA Reader and show the filenames and web links found in its asset list.',
             inputSchema: {
               type: 'object',
               properties: {
@@ -520,7 +608,7 @@
               const files = findLinks();
               return {
                 linksFound: files.length,
-                files: files.map(({ name, url }) => ({ name, url }))
+                files: files.map(({ name, s3Url }) => ({ name, s3Url }))
               };
             }
           })).catch(() => {});
